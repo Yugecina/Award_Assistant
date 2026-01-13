@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Award {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  country     String
+  language    String   @default("en") // en, fr
+  entryKitPath String?
+  uploadDate  DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categories  Category[]
+  submissions Submission[]
+}
+
+model Category {
+  id                      String   @id @default(cuid())
+  awardId                 String
+  name                    String
+  description             String?
+  criteria                String?  // JSON string
+  eligibilityRequirements String?  // JSON string
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  award       Award        @relation(fields: [awardId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@unique([awardId, name])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  boardPath   String   // Path to the project one-pager PDF
+  userId      String?  // For future auth implementation
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  submissions Submission[]
+}
+
+model Submission {
+  id                 String   @id @default(cuid())
+  projectId          String
+  awardId            String
+  selectedCategories String   // JSON array of category IDs
+  status             String   @default("draft") // draft, in_progress, completed
+  formData           String?  // JSON string of form responses
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  award        Award         @relation(fields: [awardId], references: [id], onDelete: Cascade)
+  chatSessions ChatSession[]
+
+  @@unique([projectId, awardId])
+}
+
+model ChatSession {
+  id           String   @id @default(cuid())
+  submissionId String
+  messages     String   // JSON array of chat messages
+  recommendations String? // JSON string of AI recommendations
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+}
